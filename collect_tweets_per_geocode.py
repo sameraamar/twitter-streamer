@@ -81,7 +81,9 @@ def collect_tweets_timeline(api, geocode, since, until, collection):
     
     print('Range id: ', minid, '-', maxid)
 
-    
+    #refer to this site for more details
+    #https://dev.twitter.com/rest/reference/get/search/tweets
+
     for status in tweepy.Cursor(api.search,
                            #locations= boundingboxes['Europe'],
                            #languages = ['en'],
@@ -115,7 +117,7 @@ def collect_tweets_timeline(api, geocode, since, until, collection):
 
 
 switch=0
-USERS=[ 'USER1', 'USER2', 'USER3', 'USER4', 'USER5' ]
+USERS=[ 'USER1', 'USER2', 'USER3', 'USER4',  'USER6' ]
 errors = [0]*len(USERS)
 apis = [None]*len(USERS)
 

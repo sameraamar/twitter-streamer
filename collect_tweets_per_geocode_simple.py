@@ -65,7 +65,9 @@ def get_tweets_for_user(api, username):
 def collect_tweets_timeline(since, until, collection):
     c = 0
 
-        
+    #refer to this site for more details
+    #https://dev.twitter.com/rest/reference/get/search/tweets
+
     geocode = "42.9207731,12.5352991,50mi"
     for status in tweepy.Cursor(api.search,
                            #locations= boundingboxes['Europe'],
