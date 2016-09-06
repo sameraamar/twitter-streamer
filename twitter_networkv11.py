@@ -9,7 +9,7 @@ Created on Sat Jun 18 06:11:42 2016
 #%%
 
 import json
-from tail_f import follow
+#from tail_f import follow
 import traceback
 from igraph_api import *
 import igraph
@@ -21,6 +21,7 @@ import re
 
 #0 is Tweet mode and 1 is User mode
 MODE = 0
+DATA = 1  #0 is fileset, 1 is mongodb
 
 
 numTweets = 1000000
@@ -109,11 +110,12 @@ def sort_nicely(l):
 #
 #folder = 'tweets-sensing2-users/'
 
-filename = 'italy-earthquack-2'
 
 suffix = 'users/'
 if MODE==0:
     suffix = 'tweets/'    
+
+filename = 'c:/temp/posts,json'
 
 folder = filename + '-'+str(MINUTES)+'min-'+suffix
 filename += '.json'
@@ -603,7 +605,6 @@ start = time.time()
 
 structure = {}
 
-DATA = 1
 datasets = []
 if DATA==0: #files
     datasets = [filelist]
