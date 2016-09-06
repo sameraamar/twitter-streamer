@@ -9,7 +9,7 @@ Created on Sun Aug 14 11:32:02 2016
 
 import configparser
 
-CONF_INI_FILE = 'c:/temp/conf.ini'
+CONF_INI_FILE = 'c:/data/conf.ini'
 
 #conf.ini should look like this (in c:/temp folder)
 #[DEFAULT]
@@ -131,16 +131,21 @@ if apis[switch] == None:
 client = MongoClient(host, int(port))
 db = client['twitter_db']
 
-since = '2016-08-23'
-until = '2016-08-24'
-collection = db[since+'-'+until]
+#geocode="42.6950869,13.2506592,300mi"  #Accumoli , Italy
+geocode = "31.3435979,35.6433166,200mi" # Israel
+        
+LABEL = 'Israel' 
+since = '2016-09-05'
+until = '2016-09-06'
+collection = db[since+'-'+until+'-'+LABEL]
+
 
 
 
 while(True):
     try:
         print('User: ', USERS[switch], end=", ")
-        geocode="42.6950869,13.2506592,300mi"  #Accumoli , Italy
+
         collect_tweets_timeline(apis[switch], geocode , since, until, collection)
             
     except TweepError as te:

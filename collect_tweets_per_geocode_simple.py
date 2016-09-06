@@ -9,7 +9,7 @@ Created on Sun Aug 14 11:32:02 2016
 
 import configparser
 
-CONF_INI_FILE = 'c:/temp/conf.ini'
+CONF_INI_FILE = 'c:/data/conf.ini'
 
 #conf.ini should look like this (in c:/temp folder)
 #[DEFAULT]
@@ -66,11 +66,11 @@ def collect_tweets_timeline(since, until, collection):
     c = 0
 
         
-    
+    geocode = "42.9207731,12.5352991,50mi"
     for status in tweepy.Cursor(api.search,
                            #locations= boundingboxes['Europe'],
                            #languages = ['en'],
-                           q='geocode:"42.9207731,12.5352991,50mi" since:'+since+' until:'+until+' include:retweets',
+                           q='geocode:"' + geocode + '" since:'+since+' until:'+until+' include:retweets',
                            #since="2016-08-23", 
                            #until="2016-08-24",
                            #count=100000,
@@ -100,9 +100,9 @@ api = tweepy.API(auth)
 client = MongoClient(host, int(port))
 db = client['twitter_db']
 
-since = '2016-08-24'
-until = '2016-08-25'
-collection = db[since+'-'+until+'-tmp']
+since = '2016-09-05'
+until = '2016-09-06'
+collection = db[since+'-'+until+'-Israel']
 
 collect_tweets_timeline(since, until, collection)
 
