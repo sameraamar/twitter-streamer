@@ -9,7 +9,7 @@ Created on Sun Aug 14 11:32:02 2016
 
 import configparser
 
-CONF_INI_FILE = 'c:/data/conf.ini'
+CONF_INI_FILE = 'conf.ini'
 
 #conf.ini should look like this (in c:/temp folder)
 #[DEFAULT]
@@ -113,11 +113,44 @@ def collect_tweets_timeline(api, geocode, since, until, collection):
         c+=1
         if c%100==0:
             print (c)
-    print (c)
+
+    return c==1  #we are done!
 
 
-switch=0
-USERS=[ 'USER1', 'USER2', 'USER3', 'USER4',  'USER6' ]
+
+#%%
+#*****
+import sys, random
+
+USERS=[ 'USER1', 'USER2', 'USER3', 'USER4',  'USER5',  'USER6',  'USER7',  'USER8' ]
+switch = random.randint(1, len(USERS))
+
+#geocode="42.6950869,13.2506592,300mi"  #Accumoli , Italy
+#geocode = "31.3435979,35.6433166,200mi" # Israel
+geocode = "40.7060813,-73.7749913,15mi" #NYC
+
+LABEL = 'NYC' 
+since = '2016-09-01'
+until = '2016-09-06'
+
+if len(sys.argv) == 9:
+    LABEL = sys.argv[2]
+    since = sys.argv[4]
+    until = sys.argv[6]
+    geocode = sys.argv[8]
+
+else:
+    print('wrong usage!')
+    print('-label <text> -since <yyyy-mm-dd> -until <yyyy-mm-yy> -geocode <long,lat,radius>')
+    print('Example:')
+    print('-label "Italy" -since "2016-09-01" -until "2016-09-01" -geocode "42.6950869,13.2506592,300mi"')
+    1/0  #halt
+    
+#*****
+
+print('Label: ', LABEL, 'geocode: ', geocode, 'from: ', since, ' until: ', until)
+
+
 errors = [0]*len(USERS)
 apis = [None]*len(USERS)
 
@@ -131,14 +164,10 @@ if apis[switch] == None:
 
 #client = MongoClient("mongodb://"+host+":"+port)
 client = MongoClient(host, int(port))
-db = client['twitter_db']
+db = client['streamer']
 
-#geocode="42.6950869,13.2506592,300mi"  #Accumoli , Italy
-geocode = "31.3435979,35.6433166,200mi" # Israel
-        
-LABEL = 'Israel' 
-since = '2016-09-05'
-until = '2016-09-06'
+   
+
 collection = db[since+'-'+until+'-'+LABEL]
 
 
@@ -146,9 +175,12 @@ collection = db[since+'-'+until+'-'+LABEL]
 
 while(True):
     try:
-        print('User: ', USERS[switch], end=", ")
+        print('Label: ', LABEL, 'geocode: ', geocode, 'from: ', since, ' until: ', until)
+        print('User: ', USERS[switch], end=', ')
 
-        collect_tweets_timeline(apis[switch], geocode , since, until, collection)
+        if collect_tweets_timeline(apis[switch], geocode , since, until, collection):
+            print('Finished!')
+            break
             
     except TweepError as te:
         if str(te)[-3:] == '429':
@@ -170,11 +202,24 @@ while(True):
                 auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
                 auth.set_access_token(access_key, access_secret)
                 #
-                apis[switch] = tweepy.API(auth)
+                #apis[switch] = tweepy.API(auth, retry_count=10, retry_delay=5, retry_errors=set([401, 404, 500, 503])) , wait_on_rate_limit=True)
+                apis[switch] = tweepy.API(auth, retry_count=10, retry_delay=5, retry_errors=set([500]))
+
+                #apis[switch] = tweepy.API(auth)
         else:
             print (te)
-            raise
-            
+            n = 1
+            if str(te)[0:43] == 'Failed to send request: HTTPSConnectionPool':
+                n = 5
+            print ("Tweepy error! go to sleep ",n," minutes")
+            time.sleep(n*60)
+        
+        pass
+
+    except Exception as e:
+        print (e)
+        print ("Some exception happened! go to sleep 5 minutes")
+        time.sleep(5*60)
 
 
 #
