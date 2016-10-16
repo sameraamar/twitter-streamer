@@ -10,14 +10,19 @@ from tweepy import OAuthHandler
 from tweepy import Stream
 from tweepy import Cursor
 import configparser
+from time import gmtime, strftime
+
 #import sys
 
+current_session = strftime("%Y%m%d-%H%M%S", gmtime())
+
+folder = './'
 LABEL = 'NYC'
 MAX_BULK_SIZE = 100000
-
+boundingbox=[]
 MODE=0  # 0 is a file, 1 is mongodb
 
-CONF_INI_FILE = 'c:/data/conf.ini'
+CONF_INI_FILE = 'd:/data/conf.ini'
 
 #conf.ini should look like this (in c:/temp folder)
 #[DEFAULT]
@@ -72,26 +77,37 @@ bulkcount = 0
 #%%
 from pymongo.errors import BulkWriteError
 import codecs
+import os
 
-def rollfile(n):
+def ensure_dir(path):
+    try: 
+        os.makedirs(path, exist_ok=True)
+    except OSError:
+        if not os.path.isdir(path):
+            raise
+
+def rollfile(n, timestamp=None):
 #    folder = conf.get('folder', '.')
 #    label = conf.get('label', '.')
-    folder = './' 
+
+    print(timestamp)
     label = LABEL
 
     nstr =  "%07d" % n
-    filename = folder + LABEL + '/' + '/tweets' + label + '-' + nstr + '.json'
+    tmp =  folder + '/' + LABEL + '/' + current_session
+    ensure_dir(tmp)
+    filename = tmp + '/tweets' + label + '-' + nstr + '.json'
     output = codecs.open(filename, 'w', 'utf-8')
     return output
 
-def saveTweet(json, text, count):
+def saveTweet(json, text, timestamp, count):
     if MODE ==0 :
         global out
         out.write(text) #.encode('utf8'))
         #out.write(text.replace('\n', '\\n')) #.encode('utf8'))
         if count % MAX_BULK_SIZE == 0:
             out.close()
-            out = rollfile(count / MAX_BULK_SIZE)
+            out = rollfile(count / MAX_BULK_SIZE, timestamp)
     else:
         global bulk
         global LABEL
@@ -162,27 +178,28 @@ class MyStreamListener(StreamListener):
         data = json.loads(raw_data)
 
         self.counter += 1
-        msg = ''
+        msg = LABEL + '(' + str(boundingbox) + '): '
         if 'user' not in data:
             msg += str(data)
         else:
-            msg += str(self.counter) + " tweets: " + data['id_str'] + ": " + data['user']['screen_name']
+            msg += str(self.counter) + ":" + data['id_str'] + "-" + data['user']['screen_name']
             row = ''
     
             #text = json.dumps(data, cls=json.JSONEncoder)
             
             row = row + raw_data #.encode('utf-8')
-                    
-            saveTweet(data, row, self.counter)
+            
+            timestamp =  data['created_at']
+            saveTweet(data, row, timestamp, self.counter)
     
             if 'retweeted_status' in data and data['retweeted_status'] != None:
-                msg += "\tretweet of ..." + data['retweeted_status']['id_str']
+                msg += "\t- RT" #+ data['retweeted_status']['id_str']
                 
             if 'quoted_status' in data and data['quoted_status'] != None:
-                msg += "\tQUOTE of ..." + data['quoted_status']['id_str']                
+                msg += "\t- QT" #+ data['quoted_status']['id_str']                
                    
             if 'in_reply_to_status_id' in data and data['in_reply_to_status_id'] != None:
-                 msg += "\tin reply to..." + str(data['in_reply_to_status_id'] )
+                 msg += "\t- RP" # + str(data['in_reply_to_status_id'] )
         print(msg)
             
     def on_error(self, status):
@@ -190,7 +207,7 @@ class MyStreamListener(StreamListener):
 
 #%%
 
-keys, host, port = load_config('USER7')
+keys, host, port = load_config('USER6')
 
 
 if MODE == 1:
@@ -220,17 +237,44 @@ if MODE == 1:
     tmp = None
 
 #%%
-import time
+
 import traceback
-import codecs
 
-
+import sys
 
 if __name__ == '__main__':
+
+    param = {}
+    for i in range(0, len(sys.argv)):
+        if i % 2 == 1:
+            param[sys.argv[i]] = sys.argv[i+1]
+    print (param)
     
+    MODE = int(param.get('-mode', MODE)   )
+
+    geo = param.get('-location', None)
+    if geo == None:
+        raise Exception('wrong usage - <location> is missing')
+        
+    LABEL = param.get('-label', None)
+    if LABEL == None:
+        raise Exception('wrong usage - <label> is missing')
+        
+    folder = param.get('-path', None)
+    if folder == None:
+        raise Exception('wrong usage - <path> is missing') 
+    folder = folder.replace('"', '')
+    
+    config = configparser.ConfigParser()
+    config.read(CONF_INI_FILE)
+    
+    default = config['locations']
+    boundingbox = default[geo].split(',')
+    boundingbox = [float(x) for x in boundingbox]
+        
     if MODE == 0:
         out = rollfile(0)
-        
+
     tries = 0
 
     
@@ -250,18 +294,17 @@ if __name__ == '__main__':
         try:
             #stream.filter(languages = ['en'], track=list_terms) 
             #http://boundingbox.klokantech.com/
-            boundingboxes = {}
-            boundingboxes['NYC'] = [-74.0853, 40.3924, -73.5052, 40.5247]
-            boundingboxes['Israel'] = [34.0600,29.2100,35.5500,33.2500]
-            boundingboxes['Syria'] = [35.1100,32.1600,42.3400,37.2000]
-            boundingboxes['Saudi'] = [34.2600,12.5600,60.0900,31.2800]
-            boundingboxes['Europe'] = [-11.5100,36.4800,26.3200,54.3700]
+#            boundingboxes = {}
+#            boundingboxes['NYC'] = [-74.2852635,40.3161132,-73.50,40.9249936]
+#            boundingboxes['Israel'] = [34.0600,29.2100,35.5500,33.2500]
+#            boundingboxes['Syria'] = [35.1100,32.1600,42.3400,37.2000]
+#            boundingboxes['Saudi'] = [34.2600,12.5600,60.0900,31.2800]
+#            boundingboxes['Europe'] = [-11.5100,36.4800,26.3200,54.3700]
+#            
+#            boundingboxes['USA'] = [-93.4600, 24.3100, -71.5800 , 45.2000]
             
-            boundingboxes['USA'] = [-93.4600, 24.3100, -71.5800 , 45.2000]
-            
-            stream.filter(locations= boundingboxes['NYC'] )
+            stream.filter(locations=boundingbox ) #locations= boundingboxes['USA'] )
             #stream.filter(languages = ['en'], locations= boundingboxes['USA'] )
-
         
         except Exception as e:
 #            print ("Error...tried (",tries,")", str(e))    
